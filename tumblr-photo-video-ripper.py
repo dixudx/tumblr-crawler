@@ -17,7 +17,7 @@ MEDIA_NUM = 50
 
 def download_media(site):
     download_photos(site)
-    #download_videos(site)
+    download_videos(site)
 
 
 def download_videos(site, target_folder=None):
