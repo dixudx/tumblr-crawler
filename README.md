@@ -1,4 +1,4 @@
-tumblr-crawlder
+tumblr-crawler
 ===============
 
 This is a [Python](https://www.python.org) script that you can easily download
@@ -33,23 +33,30 @@ $ pip install -r requirements.txt
 
 ## Configuration and Downloading
 
-Find a text editor and open the file `tumblr-photo-video-ripper.py`
+There are 2 ways to specify the sites you want to download, either by creating a sites.txt file or specifying in the command line parameter.
 
-Most of the codes in this file can be ignored if you have no knowledge of
-Python or Programming. Just move to the buttom, you will see
+### Use sites.txt
 
-```python
-if __name__ == "__main__":
-    # tumblr subdomain, e.g. "example1" for "example1.tumblr.com"
-    # you can expand the length of sites for your needs
-    # sites=["single-site-example"]
-    sites = ["example1", "example2", "example3"]
+Find a text editor and open the file `sites.txt`, add the sites you want to download into the file, separated by comma, no space, no `.tumblr.com` suffixes. For example, if you want to download _vogue.tumblr.com_ and _gucci.tumblr.com_, compose the file like this:
+
 ```
-
-Just modify the value of `sites` by entering your favorite tumblr blogs here.
+vogue,gucci
+```
 
 And then save the file, and run `python tumblr-photo-video-ripper.py`
 in your terminal or just **double click the file** which will be automatically run by Python.
+
+### Use the command line parameter (only for OS experts)
+
+If you are familiar with command lines in Windows or Unix systems, you may run the script with a parameter to specify the sites:
+
+```bash
+python tumblr-photo-video-ripper.py site1,site2
+```
+
+The site names should be separated with comma, no space and no `.tumblr.com` suffixes needed.
+
+### How the files get downloaded and stored
 
 The photos/videos will be saved to the folders named with the tumblr blog.
 You will find them in the current path/directory.

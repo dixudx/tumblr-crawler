@@ -1,4 +1,7 @@
+# -*- coding: utf-8 -*-
+
 import os
+import sys
 import requests
 import xmltodict
 import urllib
@@ -95,10 +98,42 @@ def _download_medium(medium_type, medium_url, folder_name):
                                                         medium_url))
 
 
+def usage():
+    print 'Please create file sites.txt under this same directory'
+    print 'in sites.txt, specify tumblr sites, separated by comma and no space'
+    print 'save the file and retry'
+    print 'Sample: site1,site2'
+    print ''
+    print 'Or use command line options'
+    print 'Sample: python tumblr-photo-video-ripper.py site1,site2'
+    print ''
+    print u'未找到sites.txt文件，请创建'
+    print u'请在文件中指定Tumblr站点名，并以逗号分割，不要有空格'
+    print u'保存文件并重试'
+    print u'例子: site1,site2'
+    print ''
+    print u'或者使用命令行参数指定站点'
+    print u'例子: python tumblr-photo-video-ripper.py site1,site2'
+
+
 if __name__ == "__main__":
-    # tumblr subdomain, e.g. "example1" for "example1.tumblr.com"
-    # you can expand the length of sites for your needs
-    # sites=["single-site-example"]
-    sites = ["example1", "example2", "example3"]
+    sites = None
+
+    if len(sys.argv) < 2:
+        # check the sites file
+        filename = 'sites.txt'
+        if os.path.exists(filename):
+            with open(filename, 'r') as f:
+                sites = f.read().rstrip().lstrip().split(',')
+        else:
+            print usage()
+            sys.exit(1)
+    else:
+        sites = sys.argv[1].split(',')
+
+    if len(sites) == 0 or sites[0] == '':
+        print usage()
+        sys.exit(1)
+
     for site in sites:
         download_media(site)
