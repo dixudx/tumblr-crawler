@@ -8,6 +8,9 @@ import socket
 # Setting timeout
 TIMEOUT = 10
 
+# Retry times
+RETRY = 5
+
 # Medium Index Number that Starts from
 START = 0
 
@@ -20,11 +23,11 @@ def download_media(site):
     download_videos(site)
 
 
-def download_videos(site, target_folder=None):
+def download_videos(site):
     _download_media(site, "video", START)
 
 
-def download_photos(site, target_folder=None):
+def download_photos(site):
     _download_media(site, "photo", START)
 
 
@@ -66,6 +69,7 @@ def _handle_medium_url(medium_type, post):
 
 
 def _download_medium(medium_type, medium_url, folder_name):
+    socket.setdefaulttimeout(TIMEOUT)
     medium_name = medium_url.split("/")[-1]
     if medium_type == "video":
         if not medium_name.startswith("tumblr"):
@@ -74,12 +78,18 @@ def _download_medium(medium_type, medium_url, folder_name):
 
     file_path = os.path.join(folder_name, medium_name)
     if not os.path.isfile(file_path):
-        try:
-            socket.setdefaulttimeout(TIMEOUT)
-            print("Downloading %s from %s.\n" % (medium_name,
-                                                 medium_url))
-            urllib.urlretrieve(medium_url, filename=file_path)
-        except:
+        print("Downloading %s from %s.\n" % (medium_name,
+                                             medium_url))
+        retry_times = 0
+        while retry_times < RETRY:
+            try:
+                urllib.urlretrieve(medium_url, filename=file_path)
+                break
+            except:
+                # try again
+                pass
+            retry_times += 1
+        else:
             os.remove(file_path)
             print("Failed to retrieve %s from %s.\n" % (medium_type,
                                                         medium_url))

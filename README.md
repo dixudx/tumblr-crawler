@@ -65,6 +65,9 @@ or videos.
 # Setting timeout
 TIMEOUT = 10
 
+# Retry times
+RETRY = 5
+
 # Medium Index Number that Starts from
 START = 0
 
@@ -74,6 +77,9 @@ MEDIA_NUM = 50
 
 You can set `TIMEOUT` to another value, e.g. 50, according to
 your network quality.
+
+And this script will retry downloading the images or videos several
+times (default value is 5).
 
 You can also only download photos or videos by commenting
 
