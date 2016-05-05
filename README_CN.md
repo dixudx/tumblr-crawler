@@ -1,4 +1,4 @@
-tumblr-crawlder
+tumblr-crawler
 ===============
 
 这是一个[Python](https://www.python.org)的脚本,配置运行后可以从某些你指定的tumblr博客
@@ -37,34 +37,30 @@ $ pip install -r requirements.txt
 
 ## 配置和运行
 
-找到一个文字编辑器,然后打开文件`tumblr-photo-video-ripper.py`
+有两种方式来指定你要下载的站点,一是编辑sites.txt,二是指定命令行参数.
 
-如果不懂编程,直接忽略里面的代码,直接跳到最后一行.
+### 第一种方法:编辑sites.txt文件
 
-```python
-if __name__ == "__main__":
-    # tumblr subdomain, e.g. "example1" for "example1.tumblr.com"
-    # you can expand the length of sites for your needs
-    # sites=["single-site-example"]
-    sites = ["example1", "example2", "example3"]
+找到一个文字编辑器,然后打开文件`sites.txt`,把你想要下载的Tumblr站点编辑进去,以逗号分隔,不要有空格,不需要`.tumblr.com`的后缀.例如,如果你要下载_vogue.tumblr.com_ and _gucci.tumblr.com_,这个文件看起来是这样的:
+
 ```
-
-把里面的`sites`的值改成你想要下载的那些tumblr博客的名字.
-
-比如有一个tumblr博客的网址是<htts://example1.tumblr.com>, 那么你就把`sites`改成
-
-```python
-    sites = ["example1"]
-```
-
-如果有多个这样的tumblr博客,就把`sites`改成
-
-```python
-    sites = ["example1", "example11", "example111", "example2"]
+vogue,gucci
 ```
 
 然后保存文件,双击运行`tumblr-photo-video-ripper.py`或者在终端(terminal)里面
 运行`python tumblr-photo-video-ripper.py`
+
+### 第二种方法:使用命令行参数(仅针对会使用操作系统终端的用户)
+
+如果你对Windows或者Unix系统的命令行很熟悉,你可以通过指定运行时的命令行参数来指定要下载的站点:
+
+```bash
+python tumblr-photo-video-ripper.py site1,site2
+```
+
+站点的名字以逗号分隔,不要有空格,不需要`.tumblr.com`的后缀.
+
+### 站点图片/视频的下载与保存
 
 程序运行后,会默认在当前路径下面生成一个跟tumblr博客名字相同的文件夹,
 照片和视频都会放在这个文件夹下面.
