@@ -6,6 +6,8 @@ import requests
 import xmltodict
 import urllib
 import socket
+from six.moves import queue as Queue
+from threading import Thread
 
 
 # Setting timeout
@@ -20,82 +22,119 @@ START = 0
 # Numbers of photos/videos per page
 MEDIA_NUM = 50
 
-
-def download_media(site):
-    download_photos(site)
-    download_videos(site)
+# Numbers of downloading threads concurrently
+THREADS = 10
 
 
-def download_videos(site):
-    _download_media(site, "video", START)
+class DownloadWorker(Thread):
+    def __init__(self, queue):
+        Thread.__init__(self)
+        self.queue = queue
+
+    def run(self):
+        while True:
+            medium_type, post, target_folder = self.queue.get()
+            self.download(medium_type, post, target_folder)
+            self.queue.task_done()
+
+    def download(self, medium_type, post, target_folder):
+        medium_url = self._handle_medium_url(medium_type, post)
+        self._download(medium_type, medium_url, target_folder)
+
+    def _handle_medium_url(self, medium_type, post):
+        if medium_type == "photo":
+            return post["photo-url"][0]["#text"]
+
+        if medium_type == "video":
+            video_player = post["video-player"][1]["#text"]
+            src = video_player.split("\n")[1].split()[1]
+            return src.split("=")[1].split("\"")[1]
+
+    def _download(self, medium_type, medium_url, target_folder):
+        socket.setdefaulttimeout(TIMEOUT)
+        medium_name = medium_url.split("/")[-1]
+        if medium_type == "video":
+            if not medium_name.startswith("tumblr"):
+                medium_name = medium_url.split("/")[-2]
+            medium_name += ".mp4"
+
+        file_path = os.path.join(target_folder, medium_name)
+        if not os.path.isfile(file_path):
+            print("Downloading %s from %s.\n" % (medium_name,
+                                                 medium_url))
+            retry_times = 0
+            while retry_times < RETRY:
+                try:
+                    urllib.urlretrieve(medium_url, filename=file_path)
+                    break
+                except:
+                    # try again
+                    pass
+                retry_times += 1
+            else:
+                os.remove(file_path)
+                print("Failed to retrieve %s from %s.\n" % (medium_type,
+                                                            medium_url))
 
 
-def download_photos(site):
-    _download_media(site, "photo", START)
+class CrawlerScheduler(object):
 
+    def __init__(self, sites):
+        self.sites = sites
+        self.queue = Queue.Queue()
+        self.scheduling()
 
-def _download_media(site, medium_type, start):
-    current_folder = os.getcwd()
-    target_folder = os.path.join(current_folder, site)
-    if not os.path.isdir(target_folder):
-        os.mkdir(target_folder)
+    def scheduling(self):
+        # create workers
+        for x in range(THREADS):
+            worker = DownloadWorker(self.queue)
+            # Setting daemon to True will let the main thread exit
+            # even though the workers are blocking
+            worker.daemon = True
+            worker.start()
 
-    start = START
-    while True:
+        for site in self.sites:
+            self.download_media(site)
+
+    def download_media(self, site):
+        self.download_photos(site)
+        self.download_videos(site)
+
+    def download_videos(self, site):
+        self._download_media(site, "video", START)
+        # wait for the queue to finish processing all the tasks from one
+        # single site
+        self.queue.join()
+        print("Finish Downloading All the videos from %s" % site)
+
+    def download_photos(self, site):
+        self._download_media(site, "photo", START)
+        # wait for the queue to finish processing all the tasks from one
+        # single site
+        self.queue.join()
+        print("Finish Downloading All the photos from %s" % site)
+
+    def _download_media(self, site, medium_type, start):
+        current_folder = os.getcwd()
+        target_folder = os.path.join(current_folder, site)
+        if not os.path.isdir(target_folder):
+            os.mkdir(target_folder)
 
         base_url = "http://{0}.tumblr.com/api/read?type={1}&num={2}&start={3}"
-        media_url = base_url.format(site, medium_type, MEDIA_NUM, start)
-        response = requests.get(media_url)
-        data = xmltodict.parse(response.content)
-        try:
-            posts = data["tumblr"]["posts"]["post"]
-            for post in posts:
-                # select the largest resolution
-                # usually in the first element
-                medium_url = _handle_medium_url(medium_type, post)
-                _download_medium(medium_type, medium_url, target_folder)
-            start += 1
-        except:
-            print("Finish Downloading All the %ss from %s" % (medium_type,
-                                                              site))
-            break
-
-
-def _handle_medium_url(medium_type, post):
-    if medium_type == "photo":
-        return post["photo-url"][0]["#text"]
-
-    if medium_type == "video":
-        video_player = post["video-player"][1]["#text"]
-        src = video_player.split("\n")[1].split()[1]
-        return src.split("=")[1].split("\"")[1]
-
-
-def _download_medium(medium_type, medium_url, folder_name):
-    socket.setdefaulttimeout(TIMEOUT)
-    medium_name = medium_url.split("/")[-1]
-    if medium_type == "video":
-        if not medium_name.startswith("tumblr"):
-            medium_name = medium_url.split("/")[-2]
-        medium_name = medium_name + ".mp4"
-
-    file_path = os.path.join(folder_name, medium_name)
-    if not os.path.isfile(file_path):
-        print("Downloading %s from %s.\n" % (medium_name,
-                                             medium_url))
-        retry_times = 0
-        while retry_times < RETRY:
+        start = START
+        while True:
+            media_url = base_url.format(site, medium_type, MEDIA_NUM, start)
+            response = requests.get(media_url)
+            data = xmltodict.parse(response.content)
             try:
-                urllib.urlretrieve(medium_url, filename=file_path)
-                break
+                posts = data["tumblr"]["posts"]["post"]
+                for post in posts:
+                    # select the largest resolution
+                    # usually in the first element
+                    self.queue.put((medium_type, post, target_folder))
+                start += 1
             except:
-                # try again
-                pass
-            retry_times += 1
-        else:
-            os.remove(file_path)
-            print("Failed to retrieve %s from %s.\n" % (medium_type,
-                                                        medium_url))
+                break
 
 
 def usage():
@@ -132,8 +171,7 @@ if __name__ == "__main__":
         sites = sys.argv[1].split(",")
 
     if len(sites) == 0 or sites[0] == "":
-        print usage()
+        usage()
         sys.exit(1)
 
-    for site in sites:
-        download_media(site)
+    CrawlerScheduler(sites)

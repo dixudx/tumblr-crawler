@@ -31,17 +31,19 @@ $ pip install -r requirements.txt
     * 如果你是Windows用户,按照上面第一个步骤来安装的Python,那么请忽略这一步,
     因为已经安装过了; 如果忘记勾选,安装教程见[这里](http://www.tuicool.com/articles/eiM3Er3/)
     * Mac用户,请参照[这个教程](http://blog.csdn.net/fancylovejava/article/details/39140373)
+    * 然后在终端(terminal)里面运行 `pip install xmltodict requests six`;
+
 
 3. 下载[tumblr-crawler](https://github.com/dixudx/tumblr-crawler/archive/master.zip)并解压缩;
 
 
 ## 配置和运行
 
-有两种方式来指定你要下载的站点,一是编辑sites.txt,二是指定命令行参数.
+有两种方式来指定你要下载的站点,一是编辑`sites.txt`,二是指定命令行参数.
 
 ### 第一种方法:编辑sites.txt文件
 
-找到一个文字编辑器,然后打开文件`sites.txt`,把你想要下载的Tumblr站点编辑进去,以逗号分隔,不要有空格,不需要`.tumblr.com`的后缀.例如,如果你要下载_vogue.tumblr.com_ and _gucci.tumblr.com_,这个文件看起来是这样的:
+找到一个文字编辑器,然后打开文件`sites.txt`,把你想要下载的Tumblr站点编辑进去,以逗号分隔,不要有空格,不需要`.tumblr.com`的后缀.例如,如果你要下载 _vogue.tumblr.com_ and _gucci.tumblr.com_,这个文件看起来是这样的:
 
 ```
 vogue,gucci
