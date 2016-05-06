@@ -38,8 +38,11 @@ class DownloadWorker(Thread):
             self.queue.task_done()
 
     def download(self, medium_type, post, target_folder):
-        medium_url = self._handle_medium_url(medium_type, post)
-        self._download(medium_type, medium_url, target_folder)
+        try:
+            medium_url = self._handle_medium_url(medium_type, post)
+            self._download(medium_type, medium_url, target_folder)
+        except TypeError:
+            pass
 
     def _handle_medium_url(self, medium_type, post):
         if medium_type == "photo":
@@ -72,7 +75,10 @@ class DownloadWorker(Thread):
                     pass
                 retry_times += 1
             else:
-                os.remove(file_path)
+                try:
+                    os.remove(file_path)
+                except OSError:
+                    pass
                 print("Failed to retrieve %s from %s.\n" % (medium_type,
                                                             medium_url))
 
