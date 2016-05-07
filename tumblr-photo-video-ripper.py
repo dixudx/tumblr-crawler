@@ -8,6 +8,7 @@ import urllib
 import socket
 from six.moves import queue as Queue
 from threading import Thread
+import re
 
 
 # Setting timeout
@@ -50,15 +51,28 @@ class DownloadWorker(Thread):
 
         if medium_type == "video":
             video_player = post["video-player"][1]["#text"]
-            src = video_player.split("\n")[1].split()[1]
-            return src.split("=")[1].split("\"")[1]
+            pattern = re.compile(r'[\S\s]*src="(\S*)" ')
+            match = pattern.match(video_player)
+            if match is not None:
+                try:
+                    return match.group(1)
+                except IndexError:
+                    pass
+
+            raise TypeError("Unable to find the right url for downloading. "
+                            "Please open a new issue on "
+                            "https://github.com/dixudx/tumblr-crawler/"
+                            "issues/new attached with below information:\n\n"
+                            "%s" % post)
 
     def _download(self, medium_type, medium_url, target_folder):
         socket.setdefaulttimeout(TIMEOUT)
-        medium_name = medium_url.split("/")[-1]
+        medium_name = medium_url.split("/")[-1].split("?")[0]
         if medium_type == "video":
             if not medium_name.startswith("tumblr"):
-                medium_name = medium_url.split("/")[-2]
+                medium_name = "_".join([medium_url.split("/")[-2],
+                                        medium_name])
+
             medium_name += ".mp4"
 
         file_path = os.path.join(target_folder, medium_name)
@@ -138,8 +152,8 @@ class CrawlerScheduler(object):
                     # select the largest resolution
                     # usually in the first element
                     self.queue.put((medium_type, post, target_folder))
-                start += 1
-            except:
+                start += MEDIA_NUM
+            except KeyError:
                 break
 
 
