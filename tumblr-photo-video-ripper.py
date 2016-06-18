@@ -41,24 +41,26 @@ class DownloadWorker(Thread):
     def download(self, medium_type, post, target_folder):
         try:
             medium_url = self._handle_medium_url(medium_type, post)
-            self._download(medium_type, medium_url, target_folder)
+            if medium_url is not None:
+                self._download(medium_type, medium_url, target_folder)
         except TypeError:
             pass
 
     def _handle_medium_url(self, medium_type, post):
-        if medium_type == "photo":
-            return post["photo-url"][0]["#text"]
+        try:
+            if medium_type == "photo":
+                return post["photo-url"][0]["#text"]
 
-        if medium_type == "video":
-            video_player = post["video-player"][1]["#text"]
-            pattern = re.compile(r'[\S\s]*src="(\S*)" ')
-            match = pattern.match(video_player)
-            if match is not None:
-                try:
-                    return match.group(1)
-                except IndexError:
-                    pass
-
+            if medium_type == "video":
+                video_player = post["video-player"][1]["#text"]
+                pattern = re.compile(r'[\S\s]*src="(\S*)" ')
+                match = pattern.match(video_player)
+                if match is not None:
+                    try:
+                        return match.group(1)
+                    except IndexError:
+                        return None
+        except:
             raise TypeError("Unable to find the right url for downloading. "
                             "Please open a new issue on "
                             "https://github.com/dixudx/tumblr-crawler/"
