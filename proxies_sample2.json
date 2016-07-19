@@ -1,0 +1,4 @@
+{
+    "http": "socks5://user:pass@host:port",
+    "https": "socks5://127.0.0.1:1080"
+}

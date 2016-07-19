@@ -4,11 +4,10 @@ import os
 import sys
 import requests
 import xmltodict
-import urllib
-import socket
 from six.moves import queue as Queue
 from threading import Thread
 import re
+import json
 
 
 # Setting timeout
@@ -28,9 +27,10 @@ THREADS = 10
 
 
 class DownloadWorker(Thread):
-    def __init__(self, queue):
+    def __init__(self, queue, proxies=None):
         Thread.__init__(self)
         self.queue = queue
+        self.proxies = proxies
 
     def run(self):
         while True:
@@ -68,7 +68,6 @@ class DownloadWorker(Thread):
                             "%s" % post)
 
     def _download(self, medium_type, medium_url, target_folder):
-        socket.setdefaulttimeout(TIMEOUT)
         medium_name = medium_url.split("/")[-1].split("?")[0]
         if medium_type == "video":
             if not medium_name.startswith("tumblr"):
@@ -84,7 +83,13 @@ class DownloadWorker(Thread):
             retry_times = 0
             while retry_times < RETRY:
                 try:
-                    urllib.urlretrieve(medium_url, filename=file_path)
+                    resp = requests.get(medium_url,
+                                        stream=True,
+                                        proxies=self.proxies,
+                                        timeout=TIMEOUT)
+                    with open(file_path, 'wb') as fh:
+                        for chunk in resp.iter_content(chunk_size=1024):
+                            fh.write(chunk)
                     break
                 except:
                     # try again
@@ -101,15 +106,17 @@ class DownloadWorker(Thread):
 
 class CrawlerScheduler(object):
 
-    def __init__(self, sites):
+    def __init__(self, sites, proxies=None):
         self.sites = sites
+        self.proxies = proxies
         self.queue = Queue.Queue()
         self.scheduling()
 
     def scheduling(self):
         # create workers
         for x in range(THREADS):
-            worker = DownloadWorker(self.queue)
+            worker = DownloadWorker(self.queue,
+                                    proxies=self.proxies)
             # Setting daemon to True will let the main thread exit
             # even though the workers are blocking
             worker.daemon = True
@@ -146,7 +153,8 @@ class CrawlerScheduler(object):
         start = START
         while True:
             media_url = base_url.format(site, medium_type, MEDIA_NUM, start)
-            response = requests.get(media_url)
+            response = requests.get(media_url,
+                                    proxies=self.proxies)
             data = xmltodict.parse(response.content)
             try:
                 posts = data["tumblr"]["posts"]["post"]
@@ -160,25 +168,43 @@ class CrawlerScheduler(object):
 
 
 def usage():
-    print("Please create file sites.txt under this same directory")
-    print("in sites.txt, specify tumblr sites, separated by comma and no space")
-    print("save the file and retry")
-    print("Sample: site1,site2")
-    print("\n")
-    print("Or use command line options")
-    print("Sample: python tumblr-photo-video-ripper.py site1,site2")
-    print("\n")
-    print(u"未找到sites.txt文件，请创建")
-    print(u"请在文件中指定Tumblr站点名，并以逗号分割，不要有空格")
-    print(u"保存文件并重试")
-    print(u"例子: site1,site2")
-    print("\n")
-    print(u"或者使用命令行参数指定站点")
-    print(u"例子: python tumblr-photo-video-ripper.py site1,site2")
+    print("1. Please create file sites.txt under this same directory.\n"
+          "2. In sites.txt, you can specify tumblr sites separated only by "
+          "comma without any blank spaces.\n"
+          "3. Save the file and retry.\n\n"
+          "Sample File Content:\nsite1,site2\n\n"
+          "Or use command line options:\n\n"
+          "Sample:\npython tumblr-photo-video-ripper.py site1,site2\n\n\n")
+    print(u"未找到sites.txt文件，请创建.\n"
+          u"请在文件中指定Tumblr站点名，并以逗号分割，不要有空格.\n"
+          u"保存文件并重试.\n\n"
+          u"例子: site1,site2\n\n"
+          u"或者直接使用命令行参数指定站点\n"
+          u"例子: python tumblr-photo-video-ripper.py site1,site2")
+
+
+def illegal_json():
+    print("Illegal JSON format in file 'proxies.json'.\n"
+          "Please refer to 'proxies_sample1.json' and 'proxies_sample2.json'.\n"
+          "And go to http://jsonlint.com/ for validation.\n\n\n")
+    print(u"文件proxies.json格式非法.\n"
+          u"请参照示例文件'proxies_sample1.json'和'proxies_sample2.json'.\n"
+          u"然后去 http://jsonlint.com/ 进行验证.")
 
 
 if __name__ == "__main__":
     sites = None
+
+    proxies = None
+    if os.path.exists("./proxies.json"):
+        with open("./proxies.json", "r") as fj:
+            try:
+                proxies = json.load(fj)
+                if proxies is not None:
+                    print("You are using proxies.\n%s" % proxies)
+            except:
+                illegal_json()
+                sys.exit(1)
 
     if len(sys.argv) < 2:
         # check the sites file
@@ -187,7 +213,7 @@ if __name__ == "__main__":
             with open(filename, "r") as f:
                 sites = f.read().rstrip().lstrip().split(",")
         else:
-            print usage()
+            usage()
             sys.exit(1)
     else:
         sites = sys.argv[1].split(",")
@@ -196,4 +222,4 @@ if __name__ == "__main__":
         usage()
         sys.exit(1)
 
-    CrawlerScheduler(sites)
+    CrawlerScheduler(sites, proxies=proxies)

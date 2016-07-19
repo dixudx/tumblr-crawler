@@ -27,7 +27,7 @@ $ pip install -r requirements.txt
 
 * Installing pip: refer to [installation guide](https://pip.readthedocs.org/en/stable/installing/#install-pip)
 
-* Run `pip install xmltodict requests six` in your terminal ([Windows terminal](http://windows.microsoft.com/en-us/windows-vista/open-a-command-prompt-window),
+* Run `pip install xmltodict six "requests>=2.10.0" "PySocks>=1.5.6"` in your terminal ([Windows terminal](http://windows.microsoft.com/en-us/windows-vista/open-a-command-prompt-window),
 [Mac OS terminal](http://www.howtogeek.com/210147/how-to-open-terminal-in-the-current-os-x-finder-location/))
 
 * Download the [zip file](https://github.com/dixudx/tumblr-crawler/archive/master.zip) and Unzip.
@@ -67,6 +67,27 @@ This script will **not re-download** the photos or videos
 if they have already been downloaded. So it will **do no harm** by running this
 script several times. In the meanwhile, you can find back the **missing** photos
 or videos.
+
+
+### Use Proxies (Optional)
+
+You may want to use proxies when downloading. Please refer to `./proxies_sample1.json` and `./proxies_sample2.json`.
+And save your own proxies to `./proxies.json` in json format.
+You can validate the content by visiting <http://jsonlint.com/>.
+
+If `./proxies.json` is an empty file, no proxies will be used during downloading.
+
+If you are using Shadowsocks with global mode, your `./proxies.json` can be,
+
+```json
+{
+    "http": "socks5://127.0.0.1:1080",
+    "https": "socks5://127.0.0.1:1080"
+}
+```
+
+And now you can enjoy your downloads.
+
 
 ### More customizations for Programmers Only
 

@@ -31,7 +31,7 @@ $ pip install -r requirements.txt
     * 如果你是Windows用户,按照上面第一个步骤来安装的Python,那么请忽略这一步,
     因为已经安装过了; 如果忘记勾选,安装教程见[这里](http://www.tuicool.com/articles/eiM3Er3/)
     * Mac用户,请参照[这个教程](http://blog.csdn.net/fancylovejava/article/details/39140373)
-    * 然后在终端(terminal)里面运行 `pip install xmltodict requests six`;
+    * 然后在终端(terminal)里面运行 `pip install xmltodict six "requests>=2.10.0" "PySocks>=1.5.6"`;
 
 
 3. 下载[tumblr-crawler](https://github.com/dixudx/tumblr-crawler/archive/master.zip)并解压缩;
@@ -69,3 +69,24 @@ python tumblr-photo-video-ripper.py site1,site2
 
 运行这个脚本,不会重复下载已经下载过的图片和视频,所以不用担心重复下载的问题.同时,多次运行可以
 帮你找回丢失的或者删除的图片和视频.
+
+### 使用代理 (可选)
+
+如果不能够顺利访问和下载tumblr的内容,你应该配置一下代理.
+
+文件格式参考`./proxies_sample1.json`和`./proxies_sample2.json`.
+然后把你的代理信息用json的格式写入`./proxies.json`.
+你可以访问<http://jsonlint.com/>以确保你的格式是正确的.
+
+如果文件`./proxies.json`没有任何内容,下载过程中不会使用代理.
+
+如果你是全局模式使用Shadowsocks做代理, 此时你的`./proxies.json`文件可以写入如下内容,
+
+```json
+{
+    "http": "socks5://127.0.0.1:1080",
+    "https": "socks5://127.0.0.1:1080"
+}
+```
+
+然后重新运行下载命令.
