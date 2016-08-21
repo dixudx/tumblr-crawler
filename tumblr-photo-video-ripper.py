@@ -200,7 +200,7 @@ if __name__ == "__main__":
         with open("./proxies.json", "r") as fj:
             try:
                 proxies = json.load(fj)
-                if proxies is not None:
+                if proxies is not None and len(proxies) > 0:
                     print("You are using proxies.\n%s" % proxies)
             except:
                 illegal_json()
