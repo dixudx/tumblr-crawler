@@ -55,11 +55,11 @@ class DownloadWorker(Thread):
                 video_player = post["video-player"][1]["#text"]
                 hd_pattern = re.compile(r'.*"hdUrl":("([^\s,]*)"|false),')
                 hd_match = hd_pattern.match(video_player)
-                if hd_match is not None:
-                    try:
+                try:
+                    if hd_match is not None and hd_match.group(1) != 'false':
                         return hd_match.group(2).replace('\\', '')
-                    except IndexError:
-                        pass
+                except IndexError:
+                    pass
                 pattern = re.compile(r'.*src="(\S*)" ')
                 match = pattern.match(video_player)
                 if match is not None:
