@@ -60,7 +60,7 @@ class DownloadWorker(Thread):
                         return hd_match.group(2).replace('\\', '')
                 except IndexError:
                     pass
-                pattern = re.compile(r'.*src="(\S*)" ')
+                pattern = re.compile(r'.*src="(\S*)" ', re.DOTALL)
                 match = pattern.match(video_player)
                 if match is not None:
                     try:
