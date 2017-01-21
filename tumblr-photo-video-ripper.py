@@ -94,6 +94,10 @@ class DownloadWorker(Thread):
                                         stream=True,
                                         proxies=self.proxies,
                                         timeout=TIMEOUT)
+                    if resp.status_code == 403:
+                        retry_times = RETRY
+                        print("Access Denied when retrieve %s.\n" % medium_url)
+                        raise Exception("Access Denied")
                     with open(file_path, 'wb') as fh:
                         for chunk in resp.iter_content(chunk_size=1024):
                             fh.write(chunk)
