@@ -167,12 +167,19 @@ class CrawlerScheduler(object):
             response = requests.get(media_url,
                                     proxies=self.proxies)
             data = xmltodict.parse(response.content)
+
             try:
                 posts = data["tumblr"]["posts"]["post"]
                 for post in posts:
-                    # select the largest resolution
-                    # usually in the first element
-                    self.queue.put((medium_type, post, target_folder))
+                    try:
+                        # if post has photoset, walk into photoset for each photo
+                        photoset = post["photoset"]["photo"]
+                        for photo in photoset:
+                            self.queue.put((medium_type, photo, target_folder))
+                    except:    
+                        # select the largest resolution
+                        # usually in the first element
+                        self.queue.put((medium_type, post, target_folder))
                 start += MEDIA_NUM
             except KeyError:
                 break
