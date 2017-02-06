@@ -26,11 +26,38 @@ MEDIA_NUM = 50
 THREADS = 10
 
 
+def video_hd_match():
+    hd_pattern = re.compile(r'.*"hdUrl":("([^\s,]*)"|false),')
+
+    def match(video_player):
+        hd_match = hd_pattern.match(video_player)
+        try:
+            if hd_match is not None and hd_match.group(1) != 'false':
+                return hd_match.group(2).replace('\\', '')
+        except:
+            return None
+    return match
+
+
+def video_default_match():
+    default_pattern = re.compile(r'.*src="(\S*)" ', re.DOTALL)
+
+    def match(video_player):
+        default_match = default_pattern.match(video_player)
+        if default_match is not None:
+            try:
+                return default_match.group(1)
+            except:
+                return None
+    return match
+
+
 class DownloadWorker(Thread):
     def __init__(self, queue, proxies=None):
         Thread.__init__(self)
         self.queue = queue
         self.proxies = proxies
+        self._register_regex_match_rules()
 
     def run(self):
         while True:
@@ -46,6 +73,12 @@ class DownloadWorker(Thread):
         except TypeError:
             pass
 
+    # can register differnet regex match rules
+    def _register_regex_match_rules(self):
+        # will iterate all the rules
+        # the first matched result will be returned
+        self.regex_rules = [video_hd_match(), video_default_match()]
+
     def _handle_medium_url(self, medium_type, post):
         try:
             if medium_type == "photo":
@@ -53,20 +86,12 @@ class DownloadWorker(Thread):
 
             if medium_type == "video":
                 video_player = post["video-player"][1]["#text"]
-                hd_pattern = re.compile(r'.*"hdUrl":("([^\s,]*)"|false),')
-                hd_match = hd_pattern.match(video_player)
-                try:
-                    if hd_match is not None and hd_match.group(1) != 'false':
-                        return hd_match.group(2).replace('\\', '')
-                except IndexError:
-                    pass
-                pattern = re.compile(r'.*src="(\S*)" ', re.DOTALL)
-                match = pattern.match(video_player)
-                if match is not None:
-                    try:
-                        return match.group(1)
-                    except IndexError:
-                        return None
+                for regex_rule in self.regex_rules:
+                    matched_url = regex_rule(video_player)
+                    if matched_url is not None:
+                        return matched_url
+                else:
+                    raise Exception
         except:
             raise TypeError("Unable to find the right url for downloading. "
                             "Please open a new issue on "
@@ -176,7 +201,7 @@ class CrawlerScheduler(object):
                         photoset = post["photoset"]["photo"]
                         for photo in photoset:
                             self.queue.put((medium_type, photo, target_folder))
-                    except:    
+                    except:
                         # select the largest resolution
                         # usually in the first element
                         self.queue.put((medium_type, post, target_folder))
