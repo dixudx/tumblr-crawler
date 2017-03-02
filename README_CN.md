@@ -4,6 +4,8 @@ tumblr-crawler
 这是一个[Python](https://www.python.org)的脚本,配置运行后可以从某些你指定的tumblr博客
 下载图片和视频.
 
+我们现在有了[Slack](https://tumblr-crawler.slack.com), 欢迎大家加入, 讨论并解决问题.
+
 ## 环境安装
 
 #### 程序猿和程序媛见这里
