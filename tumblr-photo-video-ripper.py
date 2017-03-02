@@ -2,6 +2,7 @@
 
 import os
 import sys
+import string
 import requests
 import xmltodict
 from six.moves import queue as Queue
@@ -212,14 +213,14 @@ class CrawlerScheduler(object):
 
 def usage():
     print("1. Please create file sites.txt under this same directory.\n"
-          "2. In sites.txt, you can specify tumblr sites separated only by "
-          "comma without any blank spaces.\n"
+          "2. In sites.txt, you can specify tumblr sites separated by "
+          "comma/space/tab/CR. Accept multiple lines of text\n"
           "3. Save the file and retry.\n\n"
           "Sample File Content:\nsite1,site2\n\n"
           "Or use command line options:\n\n"
           "Sample:\npython tumblr-photo-video-ripper.py site1,site2\n\n\n")
     print(u"未找到sites.txt文件，请创建.\n"
-          u"请在文件中指定Tumblr站点名，并以逗号分割，不要有空格.\n"
+          u"请在文件中指定Tumblr站点名，并以 逗号/空格/tab/表格鍵/回车符 分割，支持多行.\n"
           u"保存文件并重试.\n\n"
           u"例子: site1,site2\n\n"
           u"或者直接使用命令行参数指定站点\n"
@@ -233,6 +234,22 @@ def illegal_json():
     print(u"文件proxies.json格式非法.\n"
           u"请参照示例文件'proxies_sample1.json'和'proxies_sample2.json'.\n"
           u"然后去 http://jsonlint.com/ 进行验证.")
+
+
+def parse_sites(filename):
+    with open(filename, "r") as f:
+        raw_sites = f.read().rstrip().lstrip()
+
+    trans_table = string.maketrans("\t\r\n ", ",,,,")
+    raw_sites = raw_sites.translate(trans_table)
+    raw_sites = raw_sites.split(",")
+
+    sites = list()
+    for raw_site in raw_sites:
+        site = raw_site.lstrip().rstrip()
+        if site:
+            sites.append(site)
+    return sites
 
 
 if __name__ == "__main__":
@@ -253,8 +270,7 @@ if __name__ == "__main__":
         # check the sites file
         filename = "sites.txt"
         if os.path.exists(filename):
-            with open(filename, "r") as f:
-                sites = f.read().rstrip().lstrip().split(",")
+            sites = parse_sites(filename)
         else:
             usage()
             sys.exit(1)
