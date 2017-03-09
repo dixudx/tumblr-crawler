@@ -2,7 +2,6 @@
 
 import os
 import sys
-import string
 import requests
 import xmltodict
 from six.moves import queue as Queue
@@ -240,8 +239,10 @@ def parse_sites(filename):
     with open(filename, "r") as f:
         raw_sites = f.read().rstrip().lstrip()
 
-    trans_table = string.maketrans("\t\r\n ", ",,,,")
-    raw_sites = raw_sites.translate(trans_table)
+    raw_sites = raw_sites.replace("\t", ",") \
+                         .replace("\r", ",") \
+                         .replace("\n", ",") \
+                         .replace(" ", ",")
     raw_sites = raw_sites.split(",")
 
     sites = list()
