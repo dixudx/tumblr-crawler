@@ -191,12 +191,12 @@ class CrawlerScheduler(object):
             media_url = base_url.format(site, medium_type, MEDIA_NUM, start)
             response = requests.get(media_url,
                                     proxies=self.proxies)
-            data = xmltodict.parse(response.content)
             if response.status_code == 404:
                 print("Site %s does not exist" % site)
                 break
 
             try:
+                data = xmltodict.parse(response.content)
                 posts = data["tumblr"]["posts"]["post"]
                 for post in posts:
                     try:
