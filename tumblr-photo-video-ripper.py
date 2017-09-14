@@ -211,6 +211,9 @@ class CrawlerScheduler(object):
                 start += MEDIA_NUM
             except KeyError:
                 break
+            except UnicodeDecodeError:
+                print("Cannot decode response data from URL %s" % media_url)
+                continue
 
 
 def usage():
