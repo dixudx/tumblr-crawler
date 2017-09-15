@@ -9,7 +9,6 @@ from threading import Thread
 import re
 import json
 
-
 # Setting timeout
 TIMEOUT = 10
 
@@ -20,11 +19,16 @@ RETRY = 5
 START = 0
 
 # Numbers of photos/videos per page
-MEDIA_NUM = 50
+MEDIA_NUM = 20
 
 # Numbers of downloading threads concurrently
 THREADS = 10
 
+# just a test apikey
+API_KEY = "lmvVU5ExdfFZPyGOv0gCknJ2r1UnQEIZTYAYoDhKrq7eJdCn2o"
+
+# enum(posts,likes)
+POST_TYPE="likes"
 
 def video_hd_match():
     hd_pattern = re.compile(r'.*"hdUrl":("([^\s,]*)"|false),')
@@ -36,6 +40,7 @@ def video_hd_match():
                 return hd_match.group(2).replace('\\', '')
         except:
             return None
+
     return match
 
 
@@ -49,6 +54,7 @@ def video_default_match():
                 return default_match.group(1)
             except:
                 return None
+
     return match
 
 
@@ -82,15 +88,16 @@ class DownloadWorker(Thread):
     def _handle_medium_url(self, medium_type, post):
         try:
             if medium_type == "photo":
-                return post["photo-url"][0]["#text"]
+                return post["url"]
 
             if medium_type == "video":
-                video_player = post["video-player"][1]["#text"]
-                for regex_rule in self.regex_rules:
-                    matched_url = regex_rule(video_player)
-                    if matched_url is not None:
-                        return matched_url
-                else:
+                video_player = post["video_url"]
+                # for regex_rule in self.regex_rules:
+                    # matched_url = regex_rule(video_player)
+                    # if matched_url is not None:
+                    #         return matched_url
+                return video_player
+            else:
                     raise Exception
         except:
             raise TypeError("Unable to find the right url for downloading. "
@@ -105,7 +112,6 @@ class DownloadWorker(Thread):
             if not medium_name.startswith("tumblr"):
                 medium_name = "_".join([medium_url.split("/")[-2],
                                         medium_name])
-
             medium_name += ".mp4"
 
         file_path = os.path.join(target_folder, medium_name)
@@ -115,7 +121,8 @@ class DownloadWorker(Thread):
             retry_times = 0
             while retry_times < RETRY:
                 try:
-                    resp = requests.get(medium_url,
+                    headers = {'Connection': 'keep-alive'}
+                    resp = requests.get(medium_url, headers,
                                         stream=True,
                                         proxies=self.proxies,
                                         timeout=TIMEOUT)
@@ -141,7 +148,6 @@ class DownloadWorker(Thread):
 
 
 class CrawlerScheduler(object):
-
     def __init__(self, sites, proxies=None):
         self.sites = sites
         self.proxies = proxies
@@ -151,8 +157,7 @@ class CrawlerScheduler(object):
     def scheduling(self):
         # create workers
         for x in range(THREADS):
-            worker = DownloadWorker(self.queue,
-                                    proxies=self.proxies)
+            worker = DownloadWorker(self.queue,proxies=self.proxies)
             # Setting daemon to True will let the main thread exit
             # even though the workers are blocking
             worker.daemon = True
@@ -163,7 +168,7 @@ class CrawlerScheduler(object):
 
     def download_media(self, site):
         self.download_photos(site)
-        self.download_videos(site)
+        # self.download_videos(site)
 
     def download_videos(self, site):
         self._download_media(site, "video", START)
@@ -185,29 +190,34 @@ class CrawlerScheduler(object):
         if not os.path.isdir(target_folder):
             os.mkdir(target_folder)
 
-        base_url = "http://{0}.tumblr.com/api/read?type={1}&num={2}&start={3}"
+        # liked posts:
+        if POST_TYPE=="likes":
+            base_url = "http://api.tumblr.com/v2/blog/{0}/likes?api_key={2}&limit={3}&offset={4}"
+        else:
+            base_url = "http://api.tumblr.com/v2/blog/{0}/posts/{1}/?api_key={2}&limit={3}&offset={4}"
         start = START
         while True:
-            media_url = base_url.format(site, medium_type, MEDIA_NUM, start)
-            response = requests.get(media_url,
-                                    proxies=self.proxies)
+            media_url = base_url.format(site, medium_type, API_KEY, MEDIA_NUM, start)
+            print("Downloading from %s.\n" % media_url)
+            response = requests.get(media_url,proxies=self.proxies)
             if response.status_code == 404:
                 print("Site %s does not exist" % site)
                 break
 
             try:
-                data = xmltodict.parse(response.content)
-                posts = data["tumblr"]["posts"]["post"]
-                for post in posts:
-                    try:
-                        # if post has photoset, walk into photoset for each photo
-                        photoset = post["photoset"]["photo"]
-                        for photo in photoset:
-                            self.queue.put((medium_type, photo, target_folder))
-                    except:
-                        # select the largest resolution
-                        # usually in the first element
-                        self.queue.put((medium_type, post, target_folder))
+                try:
+                    if 200 == response.status_code:
+                        data = json.loads(response.content)
+                except ValueError:
+                    print('JSON syntax error' + response.content)
+                    return
+
+                if POST_TYPE=="likes":
+                    posts = data["response"]["liked_posts"]
+                    self.downloadTaskPreHandlerOfLikePost(medium_type, posts, target_folder)
+                else:
+                    posts = data["response"]["posts"]
+                    self.downloadTaskPreHandlerOfNormalPost(medium_type, posts, target_folder)
                 start += MEDIA_NUM
             except KeyError:
                 break
@@ -215,7 +225,44 @@ class CrawlerScheduler(object):
                 print("Cannot decode response data from URL %s" % media_url)
                 continue
 
+    # download post
+    def downloadTaskPreHandlerOfNormalPost(self, medium_type, posts, target_folder):
+        if medium_type == "photo":
+            for post in posts:
+                try:
+                    # if post has photoset, walk into photoset for each photo
+                    photoset = post["photos"]
+                    for photo in photoset:
+                        self.queue.put((medium_type, photo["original_size"], target_folder))
+                except:
+                    # select the largest resolution
+                    # usually in the first element
+                    self.queue.put((medium_type, post, target_folder))
+        elif medium_type == "video":
+            for post in posts:
+                try:
+                    self.queue.put((medium_type, post, target_folder))
+                except:
+                    # select the largest resolution
+                    # usually in the first element
+                    self.queue.put((medium_type, post, target_folder))
 
+
+    # download like
+    def downloadTaskPreHandlerOfLikePost(self, medium_type, posts, target_folder):
+        for post in posts:
+            try:
+                # if post has photoset, walk into photoset for each photo
+                if post["type"] == "photo":
+                    photoset = post["photos"]
+                    for photo in photoset:
+                        self.queue.put((medium_type, photo["original_size"], target_folder))
+                elif post["type"] == "video":
+                    self.queue.put((medium_type, post, target_folder))
+            except:
+                # select the largest resolution
+                # usually in the first element
+                self.queue.put((medium_type, post, target_folder))
 def usage():
     print("1. Please create file sites.txt under this same directory.\n"
           "2. In sites.txt, you can specify tumblr sites separated by "
@@ -224,21 +271,21 @@ def usage():
           "Sample File Content:\nsite1,site2\n\n"
           "Or use command line options:\n\n"
           "Sample:\npython tumblr-photo-video-ripper.py site1,site2\n\n\n")
-    print(u"未找到sites.txt文件，请创建.\n"
-          u"请在文件中指定Tumblr站点名，并以 逗号/空格/tab/表格鍵/回车符 分割，支持多行.\n"
-          u"保存文件并重试.\n\n"
-          u"例子: site1,site2\n\n"
-          u"或者直接使用命令行参数指定站点\n"
-          u"例子: python tumblr-photo-video-ripper.py site1,site2")
+    print(u"can not find sites.txt，please create it first.\n"
+          u"set Tumblr site name，split with comma,backspace,tab or split by line.\n"
+          u"save site.txt and retry.\n\n"
+          u"examples: site1,site2\n\n"
+          u"or use command to execute\n"
+          u"demo: python tumblr-photo-video-ripper.py site1,site2")
 
 
 def illegal_json():
     print("Illegal JSON format in file 'proxies.json'.\n"
           "Please refer to 'proxies_sample1.json' and 'proxies_sample2.json'.\n"
           "And go to http://jsonlint.com/ for validation.\n\n\n")
-    print(u"文件proxies.json格式非法.\n"
-          u"请参照示例文件'proxies_sample1.json'和'proxies_sample2.json'.\n"
-          u"然后去 http://jsonlint.com/ 进行验证.")
+    print(u"proxies.json format illegal.\n"
+          u"refer to 'proxies_sample1.json' and 'proxies_sample2.json'.\n"
+          u"you can validate in http://jsonlint.com.")
 
 
 def parse_sites(filename):
@@ -246,9 +293,9 @@ def parse_sites(filename):
         raw_sites = f.read().rstrip().lstrip()
 
     raw_sites = raw_sites.replace("\t", ",") \
-                         .replace("\r", ",") \
-                         .replace("\n", ",") \
-                         .replace(" ", ",")
+        .replace("\r", ",") \
+        .replace("\n", ",") \
+        .replace(" ", ",")
     raw_sites = raw_sites.split(",")
 
     sites = list()

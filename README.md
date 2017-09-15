@@ -1,8 +1,11 @@
-tumblr-crawler
+tumblr-crawler-apiv2
 ===============
 
-This is a [Python](https://www.python.org) script that you can easily download
-all the photos and videos from your favorite tumblr blogs.
+New Features:
+* Tumblr Crawler impl by [tumblr apiv2](https://www.tumblr.com/docs/en/api/v2),Solve the authentication issue;
+* You can set `POST_TYPE`(posts/likes) to download all your liked posts;
+
+So you can download all the photos and videos from your favorite tumblr blogs.
 
 ## 中文版教程请[移步这里](./README_CN.md)
 
@@ -93,47 +96,3 @@ If you are using Shadowsocks with global mode, your `./proxies.json` can be,
 ```
 
 And now you can enjoy your downloads.
-
-
-### More customizations for Programmers Only
-
-```
-# Setting timeout
-TIMEOUT = 10
-
-# Retry times
-RETRY = 5
-
-# Medium Index Number that Starts from
-START = 0
-
-# Numbers of photos/videos per page
-MEDIA_NUM = 50
-
-# Numbers of downloading threads concurrently
-THREADS = 10
-```
-
-You can set `TIMEOUT` to another value, e.g. 50, according to
-your network quality.
-
-And this script will retry downloading the images or videos several
-times (default value is 5).
-
-You can also only download photos or videos by commenting
-
-```python
-def download_media(self, site):
-    # only download photos
-    self.download_photos(site)
-    #self.download_videos(site)
-```
-
-or
-
-```python
-def download_media(self, site):
-    # only download videos
-    #self.download_photos(site)
-    self.download_videos(site)
-```
