@@ -8,6 +8,8 @@ from six.moves import queue as Queue
 from threading import Thread
 import re
 import json
+import defusedexpat
+from xml.parsers.expat import ExpatError
 
 
 # Setting timeout
@@ -196,7 +198,9 @@ class CrawlerScheduler(object):
                 break
 
             try:
-                data = xmltodict.parse(response.content)
+                xml_cleaned = re.sub(u'[^\x20-\x7f]+',
+                                     u'', response.content)
+                data = xmltodict.parse(xml_cleaned, expat=defusedexpat.pyexpat)
                 posts = data["tumblr"]["posts"]["post"]
                 for post in posts:
                     try:
@@ -213,6 +217,9 @@ class CrawlerScheduler(object):
                 break
             except UnicodeDecodeError:
                 print("Cannot decode response data from URL %s" % media_url)
+                continue
+            except ExpatError:
+                print("Unknown xml-vulnerabilities from URL %s" % media_url)
                 continue
 
 
