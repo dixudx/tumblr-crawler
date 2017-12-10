@@ -8,6 +8,7 @@ from six.moves import queue as Queue
 from threading import Thread
 import re
 import json
+import defusedexpat
 
 
 # Setting timeout
@@ -196,7 +197,7 @@ class CrawlerScheduler(object):
                 break
 
             try:
-                data = xmltodict.parse(response.content)
+                data = xmltodict.parse(response.content, expat=defusedexpat.pyexpat)
                 posts = data["tumblr"]["posts"]["post"]
                 for post in posts:
                     try:
