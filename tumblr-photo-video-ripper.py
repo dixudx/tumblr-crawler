@@ -197,7 +197,7 @@ class CrawlerScheduler(object):
 
             try:
                 xml_cleaned = re.sub(u'[^\x20-\x7f]+',
-                                     u'', response.content)
+                                     u'', response.content.decode('utf-8'))
                 data = xmltodict.parse(xml_cleaned)
                 posts = data["tumblr"]["posts"]["post"]
                 for post in posts:
