@@ -109,7 +109,6 @@ class DownloadWorker(Thread):
             medium_name += ".mp4"
             medium_url = 'https://vt.tumblr.com/' + medium_name
 
-
         file_path = os.path.join(target_folder, medium_name)
         if not os.path.isfile(file_path):
             print("Downloading %s from %s.\n" % (medium_name,
