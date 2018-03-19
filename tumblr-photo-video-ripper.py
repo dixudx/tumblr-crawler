@@ -11,7 +11,7 @@ import json
 
 
 # Setting timeout
-TIMEOUT = 20
+TIMEOUT = 10
 
 # Retry times
 RETRY = 5
@@ -68,12 +68,18 @@ class DownloadWorker(Thread):
     def download(self, medium_type, post, target_folder):
         try:
             medium_url = self._handle_medium_url(medium_type, post)
+            #print("medium url is %s", medium_url)
             resp_raw = requests.get(medium_url, stream=True, proxies=self.proxies, timeout=TIMEOUT)
             if medium_type == "video":
                 self._download(medium_type, medium_url, target_folder, resp_raw)
             elif medium_type == "photo":
                 medium_url_bak = medium_url
-                medium_url_raw = "http://data.tumblr." + medium_url.split('.')[3].split('_')[0] +"_" + medium_url.split('.')[3].split('_')[1] + "_raw." + medium_url.split('.')[4]
+                medium_url_dot = medium_url.split('.')
+                medium_url_underline = medium_url_dot[-2].split('_')
+                medium_url_raw = "http://data.tumblr."
+                for index in range(len(medium_url_underline) - 1):
+                    medium_url_raw = medium_url_raw + medium_url_underline[index] + "_"
+                medium_url_raw = medium_url_raw + "raw." + medium_url_dot[-1]
                 if medium_url is not None:
                     self._download(medium_type, medium_url_raw, target_folder, resp_raw)
                 elif medium_url_bak is not None and resp_raw.status_code == 403:
