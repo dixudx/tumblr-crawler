@@ -68,27 +68,17 @@ class DownloadWorker(Thread):
     def download(self, medium_type, post, target_folder):
         try:
             medium_url = self._handle_medium_url(medium_type, post)
-            medium_url_bak = medium_url
-            medium_url =re.sub(u'[^/]*media.tumblr.com', u'data.tumblr.com', medium_url)
-            if (b'_100.' in medium_url):
-                medium_url = medium_url.replace('_100.','_raw.')
-            elif (b'_250.' in medium_url):
-                medium_url = medium_url.replace('_250.','_raw.')
-            elif (b'_400.' in medium_url):
-                medium_url = medium_url.replace('_400.','_raw.')
-            elif (b'_500.' in medium_url):
-                medium_url = medium_url.replace('_500.','_raw.')
-            elif (b'_540.' in medium_url):
-                medium_url = medium_url.replace('_540.','_raw.')
-            elif (b'_1280.' in medium_url):
-                medium_url = medium_url.replace('_1280.','_raw.')
-            #medium_url = medium_url.replace('https://','http://')
             resp_raw = requests.get(medium_url, stream=True, proxies=self.proxies, timeout=TIMEOUT)
-            if medium_url is not None:
+            if medium_type == "video":
                 self._download(medium_type, medium_url, target_folder, resp_raw)
-            elif medium_url_bak is not None and resp_raw.status_code == 403:
-                resp= requests.get(medium_url_bak, stream=True, proxies=self.proxies, timeout=TIMEOUT)
-                self._download(medium_type, medium_url_bak, target_folder, resp)
+            elif medium_type == "photo":
+                medium_url_bak = medium_url
+                medium_url_raw = "http://data.tumblr." + medium_url.split('.')[3].split('_')[0] +"_" + medium_url.split('.')[3].split('_')[1] + "_raw." + medium_url.split('.')[4]
+                if medium_url is not None:
+                    self._download(medium_type, medium_url_raw, target_folder, resp_raw)
+                elif medium_url_bak is not None and resp_raw.status_code == 403:
+                    resp= requests.get(medium_url_bak, stream=True, proxies=self.proxies, timeout=TIMEOUT)
+                    self._download(medium_type, medium_url_bak, target_folder, resp)
         except TypeError:
             pass
 
