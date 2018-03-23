@@ -8,7 +8,7 @@ all the photos and videos from your favorite tumblr blogs.
 
 ## How to Discuss
 
-* Feel free to join our [Slack](https://tumblr-crawler.slack.com), where you can ask questions and help answer them on Slack.
+* Feel free to join our [Slack](https://join.slack.com/t/tumblr-crawler/shared_invite/enQtMzM0MTM1MzkwMDM0LTY0OTg2ZTk0MGI5NTU4NDRlYjc4ZDM3OWIxYmE2ZWJhMTdkZmQxYmM0ZWVhYWJmMjM3MTkwMTkxMTQwYTk4ZDk), where you can ask questions and help answer them on Slack.
 * Also you can open new issue on [Github](https://github.com/dixudx/tumblr-crawler/issues/new)
 
 ## Prerequisite

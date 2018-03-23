@@ -6,7 +6,7 @@ tumblr-crawler
 
 ## 怎么样方便地讨论交流
 
-* 我们现在有了[Slack](https://tumblr-crawler.slack.com), 欢迎大家加入, 讨论并解决问题.
+* 我们现在有了[Slack](https://join.slack.com/t/tumblr-crawler/shared_invite/enQtMzM0MTM1MzkwMDM0LTY0OTg2ZTk0MGI5NTU4NDRlYjc4ZDM3OWIxYmE2ZWJhMTdkZmQxYmM0ZWVhYWJmMjM3MTkwMTkxMTQwYTk4ZDk), 欢迎大家加入, 讨论并解决问题.
 * 或者直接在[Github](https://github.com/dixudx/tumblr-crawler/issues/new)上开新的issue;
 
 ## 环境安装
