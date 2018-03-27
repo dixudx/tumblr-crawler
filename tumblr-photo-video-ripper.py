@@ -265,11 +265,13 @@ def parse_sites(filename):
 
 
 if __name__ == "__main__":
+    cur_dir = os.path.dirname(os.path.realpath(__file__))
     sites = None
 
     proxies = None
-    if os.path.exists("./proxies.json"):
-        with open("./proxies.json", "r") as fj:
+    proxy_path = os.path.join(cur_dir, "proxies.json")
+    if os.path.exists(proxy_path):
+        with open(proxy_path, "r") as fj:
             try:
                 proxies = json.load(fj)
                 if proxies is not None and len(proxies) > 0:
@@ -280,7 +282,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         # check the sites file
-        filename = "sites.txt"
+        filename = os.path.join(cur_dir, "sites.txt")
         if os.path.exists(filename):
             sites = parse_sites(filename)
         else:
