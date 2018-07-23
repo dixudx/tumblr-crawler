@@ -144,6 +144,7 @@ class CrawlerScheduler(object):
 
     def __init__(self, sites, proxies=None):
         self.sites = sites
+        self.cached = {}
         self.proxies = proxies
         self.queue = Queue.Queue()
         self.scheduling()
@@ -184,6 +185,8 @@ class CrawlerScheduler(object):
         target_folder = os.path.join(current_folder, site)
         if not os.path.isdir(target_folder):
             os.mkdir(target_folder)
+        else:
+            self.cached[site] = os.listdir(target_folder)
 
         base_url = "http://{0}.tumblr.com/api/read?type={1}&num={2}&start={3}"
         start = START
@@ -205,7 +208,8 @@ class CrawlerScheduler(object):
                         # if post has photoset, walk into photoset for each photo
                         photoset = post["photoset"]["photo"]
                         for photo in photoset:
-                            self.queue.put((medium_type, photo, target_folder))
+                            if photo['photo-url'][0]['text'].split('/')[-1] not in self.cached[site]:
+                                self.queue.put((medium_type, photo, target_folder))
                     except:
                         # select the largest resolution
                         # usually in the first element
