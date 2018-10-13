@@ -186,7 +186,7 @@ class CrawlerScheduler(object):
         if not os.path.isdir(target_folder):
             os.mkdir(target_folder)
 
-        base_url = "http://{0}.tumblr.com/api/read?type={1}&num={2}&start={3}"
+        base_url = "https://{0}.tumblr.com/api/read?type={1}&num={2}&start={3}"
         start = START
         while True:
             media_url = base_url.format(site, medium_type, MEDIA_NUM, start)
