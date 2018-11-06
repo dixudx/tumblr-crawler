@@ -182,9 +182,12 @@ class CrawlerScheduler(object):
 
     def _download_media(self, site, medium_type, start):
         current_folder = os.getcwd()
-        target_folder = os.path.join(current_folder, site)
-        if not os.path.isdir(target_folder):
-            os.mkdir(target_folder)
+        target_folder_base = os.path.join(current_folder, site)
+        if not os.path.isdir(target_folder_base):
+            os.mkdir(target_folder_base)
+        target_folder_other = os.path.join(current_folder, site+'-other')
+        if not os.path.isdir(target_folder_other):
+            os.mkdir(target_folder_other)
 
         base_url = "https://{0}.tumblr.com/api/read?type={1}&num={2}&start={3}"
         start = START
@@ -202,6 +205,13 @@ class CrawlerScheduler(object):
                 data = xmltodict.parse(xml_cleaned)
                 posts = data["tumblr"]["posts"]["post"]
                 for post in posts:
+                    if '@reblogged-from-url' in post:
+                        target_folder=target_folder_other
+                        if len (sys.argv) > 2 and sys.argv[2] == '-norepost':
+                            print ("Skipped\n")
+                            continue
+                    else:
+                        target_folder=target_folder_base
                     try:
                         # if post has photoset, walk into photoset for each photo
                         photoset = post["photoset"]["photo"]
