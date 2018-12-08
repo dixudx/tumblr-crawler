@@ -81,6 +81,9 @@ class DownloadWorker(Thread):
 
     def _handle_medium_url(self, medium_type, post):
         try:
+            if medium_type == "text":
+                return post
+
             if medium_type == "photo":
                 return post["photo-url"][0]["#text"]
 
@@ -163,6 +166,7 @@ class CrawlerScheduler(object):
             self.download_media(site)
 
     def download_media(self, site):
+        self.download_text(site)
         self.download_photos(site)
         self.download_videos(site)
 
@@ -180,6 +184,13 @@ class CrawlerScheduler(object):
         self.queue.join()
         print("Finish Downloading All the photos from %s" % site)
 
+    def download_text(self, site):
+        self._download_media(site, "text", START)
+        # wait for the queue to finish processing all the tasks from one
+        # single site
+        self.queue.join()
+        print("Finish Downloading All the text from %s" % site)
+
     def _download_media(self, site, medium_type, start):
         current_folder = os.getcwd()
         target_folder = os.path.join(current_folder, site)
@@ -195,18 +206,21 @@ class CrawlerScheduler(object):
             if response.status_code == 404:
                 print("Site %s does not exist" % site)
                 break
-
             try:
-                xml_cleaned = re.sub(u'[^\x20-\x7f]+',
-                                     u'', response.content.decode('utf-8'))
-                data = xmltodict.parse(xml_cleaned)
+                data = xmltodict.parse(response.text)
                 posts = data["tumblr"]["posts"]["post"]
                 for post in posts:
                     try:
                         # if post has photoset, walk into photoset for each photo
-                        photoset = post["photoset"]["photo"]
-                        for photo in photoset:
-                            self.queue.put((medium_type, photo, target_folder))
+                        if medium_type == "text":
+                            pattern = re.compile('.*?<img.*?data-orig-src="(.*?)"/>', re.S)
+                            pic_urls = re.findall(pattern, post["regular-body"])
+                            for pic_url in pic_urls:
+                                self.queue.put((medium_type, pic_url, target_folder))
+                        else:
+                            photoset = post["photoset"]["photo"]
+                            for photo in photoset:
+                                self.queue.put((medium_type, photo, target_folder))
                     except:
                         # select the largest resolution
                         # usually in the first element
