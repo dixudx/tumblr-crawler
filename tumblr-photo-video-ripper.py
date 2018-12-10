@@ -27,7 +27,7 @@ THREADS = 10
 
 # Do you like to dump each post as separate json (otherwise you have to extract from bulk xml files)
 # This option is for convenience for terminal users who would like to query e.g. with ./jq (https://stedolan.github.io/jq/)
-EACH_POST_AS_SEPARATE_JSON = True
+EACH_POST_AS_SEPARATE_JSON = False
 
 
 def video_hd_match():
