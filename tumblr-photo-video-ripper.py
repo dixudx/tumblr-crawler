@@ -207,7 +207,6 @@ class CrawlerScheduler(object):
                 posts = data["tumblr"]["posts"]["post"]
                 for post in posts:
                     post_json_file = "{0}/{0}_post_id_{1}.post.json".format(site, post['@id'])
-                    print(post_json_file)
                     with open(post_json_file, "w") as text_file:
                         text_file.write(json.dumps(post))
 
