@@ -1,14 +1,13 @@
 # -*- coding: utf-8 -*-
 
-import os
+import json
 import sys
+import os
+import re
 import requests
 import xmltodict
 from six.moves import queue as Queue
 from threading import Thread
-import re
-import json
-
 
 # Setting timeout
 TIMEOUT = 10
@@ -40,6 +39,7 @@ def video_hd_match():
                 return hd_match.group(2).replace('\\', '')
         except:
             return None
+
     return match
 
 
@@ -53,6 +53,7 @@ def video_default_match():
                 return default_match.group(1)
             except:
                 return None
+
     return match
 
 
@@ -65,15 +66,15 @@ class DownloadWorker(Thread):
 
     def run(self):
         while True:
-            medium_type, post, target_folder = self.queue.get()
-            self.download(medium_type, post, target_folder)
+            site, medium_type, post, target_folder = self.queue.get()
+            self.download(site, medium_type, post, target_folder)
             self.queue.task_done()
 
-    def download(self, medium_type, post, target_folder):
+    def download(self, site, medium_type, post, target_folder):
         try:
             medium_url = self._handle_medium_url(medium_type, post)
             if medium_url is not None:
-                self._download(medium_type, medium_url, target_folder)
+                self._download(site, medium_type, medium_url, target_folder)
         except TypeError:
             pass
 
@@ -103,7 +104,7 @@ class DownloadWorker(Thread):
                             "issues/new attached with below information:\n\n"
                             "%s" % post)
 
-    def _download(self, medium_type, medium_url, target_folder):
+    def _download(self, site, medium_type, medium_url, target_folder):
         medium_name = medium_url.split("/")[-1].split("?")[0]
         if medium_type == "video":
             if not medium_name.startswith("tumblr"):
@@ -115,8 +116,7 @@ class DownloadWorker(Thread):
 
         file_path = os.path.join(target_folder, medium_name)
         if not os.path.isfile(file_path):
-            print("Downloading %s from %s.\n" % (medium_name,
-                                                 medium_url))
+            print("%s Downloading %s from %s.\n" % (site, medium_name, medium_url))
             retry_times = 0
             while retry_times < RETRY:
                 try:
@@ -126,7 +126,7 @@ class DownloadWorker(Thread):
                                         timeout=TIMEOUT)
                     if resp.status_code == 403:
                         retry_times = RETRY
-                        print("Access Denied when retrieve %s.\n" % medium_url)
+                        print("%s Access Denied when retrieve %s.\n" % (site, medium_url))
                         raise Exception("Access Denied")
                     with open(file_path, 'wb') as fh:
                         for chunk in resp.iter_content(chunk_size=1024):
@@ -141,8 +141,7 @@ class DownloadWorker(Thread):
                     os.remove(file_path)
                 except OSError:
                     pass
-                print("Failed to retrieve %s from %s.\n" % (medium_type,
-                                                            medium_url))
+                print("%s Failed to retrieve %s from %s.\n" % (site, medium_type, medium_url))
 
 
 class CrawlerScheduler(object):
@@ -191,26 +190,28 @@ class CrawlerScheduler(object):
             os.mkdir(target_folder)
 
         base_url = "https://{0}.tumblr.com/api/read?type={1}&num={2}&start={3}"
+        retry_times_for_site = 0
+        retry_times = 0
         start = START
+
         while True:
-            media_url = base_url.format(site, medium_type, MEDIA_NUM, start)
-            response = requests.get(media_url,
-                                    proxies=self.proxies)
-            if response.status_code == 404:
-                print("Site %s does not exist" % site)
-                break
-
-            response_file = "{0}/{0}_{1}_{2}_{3}.response.xml".format(site, medium_type, MEDIA_NUM, start)
-            with open(response_file, "w") as text_file:
-                text_file.write(response.content)
-
             try:
+                media_url = base_url.format(site, medium_type, MEDIA_NUM, start)
+                response = requests.get(media_url,
+                                        proxies=self.proxies)
+                if response.status_code == 404:
+                    print("Site %s does not exist" % site)
+                    break
+
+                response_file = "{0}/{0}_{1}_{2}_{3}.response.xml".format(site, medium_type, MEDIA_NUM, start)
+                with open(response_file, "w") as text_file:
+                    text_file.write(response.content.decode("utf-8"))
+
                 xml_cleaned = re.sub(u'[^\x20-\x7f]+',
                                      u'', response.content.decode('utf-8'))
                 data = xmltodict.parse(xml_cleaned)
                 posts = data["tumblr"]["posts"]["post"]
                 for post in posts:
-		    # by default it is switched to false to generate less files, as anyway you can extract this from bulk xml files.
                     if EACH_POST_AS_SEPARATE_JSON == True:
                         post_json_file = "{0}/{0}_post_id_{1}.post.json".format(site, post['@id'])
                         with open(post_json_file, "w") as text_file:
@@ -220,20 +221,32 @@ class CrawlerScheduler(object):
                         # if post has photoset, walk into photoset for each photo
                         photoset = post["photoset"]["photo"]
                         for photo in photoset:
-                            self.queue.put((medium_type, photo, target_folder))
+                            self.queue.put((site, medium_type, photo, target_folder))
                     except:
                         # select the largest resolution
                         # usually in the first element
-                        self.queue.put((medium_type, post, target_folder))
+                        self.queue.put((site, medium_type, post, target_folder))
                 start += MEDIA_NUM
-            except KeyError:
-                break
-            except UnicodeDecodeError:
-                print("Cannot decode response data from URL %s" % media_url)
-                continue
-            except:
-                print("Unknown xml-vulnerabilities from URL %s" % media_url)
-                continue
+                retry_times = 0
+                retry_times_for_site = 0
+            except (KeyboardInterrupt, SystemExit):
+                raise
+            except Exception as err:
+                try:
+                    print("For site %s, Exception occured: '%s' for URL %s" % (site, err, media_url))
+                except:
+                    print("For site %s, Exception occured: '%s' for URL" %(site, err))
+                raise err
+                if retry_times > RETRY:
+                    start += MEDIA_NUM
+                    retry_times = 0
+                    retry_times_for_site += 1
+                if retry_times_for_site > RETRY:
+                    print("Unable to finish getting content from %s due to persistent unknown errors" % site)
+                    break
+                else:
+                    continue
+
 
 
 def usage():
@@ -266,9 +279,9 @@ def parse_sites(filename):
         raw_sites = f.read().rstrip().lstrip()
 
     raw_sites = raw_sites.replace("\t", ",") \
-                         .replace("\r", ",") \
-                         .replace("\n", ",") \
-                         .replace(" ", ",")
+        .replace("\r", ",") \
+        .replace("\n", ",") \
+        .replace(" ", ",")
     raw_sites = raw_sites.split(",")
 
     sites = list()
