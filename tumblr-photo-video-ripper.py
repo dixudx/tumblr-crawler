@@ -202,7 +202,7 @@ class CrawlerScheduler(object):
 
             response_file = "{0}/{0}_{1}_{2}_{3}.response.xml".format(site, medium_type, MEDIA_NUM, start)
             with open(response_file, "w") as text_file:
-                text_file.write(response.content)
+                text_file.write(response.content.decode('utf-8'))
 
             try:
                 xml_cleaned = re.sub(u'[^\x20-\x7f]+',
@@ -210,8 +210,9 @@ class CrawlerScheduler(object):
                 data = xmltodict.parse(xml_cleaned)
                 posts = data["tumblr"]["posts"]["post"]
                 for post in posts:
-		    # by default it is switched to false to generate less files, as anyway you can extract this from bulk xml files.
-                    if EACH_POST_AS_SEPARATE_JSON == True:
+                    # by default it is switched to false to generate less files,
+                    # as anyway you can extract this from bulk xml files.
+                    if EACH_POST_AS_SEPARATE_JSON:
                         post_json_file = "{0}/{0}_post_id_{1}.post.json".format(site, post['@id'])
                         with open(post_json_file, "w") as text_file:
                             text_file.write(json.dumps(post))
