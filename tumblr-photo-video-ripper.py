@@ -77,7 +77,7 @@ class DownloadWorker(Thread):
         except TypeError:
             pass
 
-    # can register differnet regex match rules
+    # can register different regex match rules
     def _register_regex_match_rules(self):
         # will iterate all the rules
         # the first matched result will be returned
