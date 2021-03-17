@@ -72,8 +72,23 @@ class DownloadWorker(Thread):
     def download(self, medium_type, post, target_folder):
         try:
             medium_url = self._handle_medium_url(medium_type, post)
-            if medium_url is not None:
-                self._download(medium_type, medium_url, target_folder)
+            #print("medium url is %s", medium_url)
+            resp_raw = requests.get(medium_url, stream=True, proxies=self.proxies, timeout=TIMEOUT)
+            if medium_type == "video":
+                self._download(medium_type, medium_url, target_folder, resp_raw)
+            elif medium_type == "photo":
+                medium_url_bak = medium_url
+                medium_url_dot = medium_url.split('.')
+                medium_url_underline = medium_url_dot[-2].split('_')
+                medium_url_raw = "http://data.tumblr."
+                for index in range(len(medium_url_underline) - 1):
+                    medium_url_raw = medium_url_raw + medium_url_underline[index] + "_"
+                medium_url_raw = medium_url_raw + "raw." + medium_url_dot[-1]
+                if medium_url is not None:
+                    self._download(medium_type, medium_url_raw, target_folder, resp_raw)
+                elif medium_url_bak is not None and resp_raw.status_code == 403:
+                    resp= requests.get(medium_url_bak, stream=True, proxies=self.proxies, timeout=TIMEOUT)
+                    self._download(medium_type, medium_url_bak, target_folder, resp)
         except TypeError:
             pass
 
@@ -103,7 +118,7 @@ class DownloadWorker(Thread):
                             "issues/new attached with below information:\n\n"
                             "%s" % post)
 
-    def _download(self, medium_type, medium_url, target_folder):
+    def _download(self, medium_type, medium_url, target_folder, resp):
         medium_name = medium_url.split("/")[-1].split("?")[0]
         if medium_type == "video":
             if not medium_name.startswith("tumblr"):
@@ -120,10 +135,6 @@ class DownloadWorker(Thread):
             retry_times = 0
             while retry_times < RETRY:
                 try:
-                    resp = requests.get(medium_url,
-                                        stream=True,
-                                        proxies=self.proxies,
-                                        timeout=TIMEOUT)
                     if resp.status_code == 403:
                         retry_times = RETRY
                         print("Access Denied when retrieve %s.\n" % medium_url)
