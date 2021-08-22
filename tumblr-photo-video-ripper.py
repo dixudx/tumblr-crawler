@@ -110,7 +110,7 @@ class DownloadWorker(Thread):
                 medium_name = "_".join([medium_url.split("/")[-2],
                                         medium_name])
 
-            medium_name += ".mp4"
+            #medium_name += ".mp4"
             medium_url = 'https://vt.tumblr.com/' + medium_name
 
         file_path = os.path.join(target_folder, medium_name)
