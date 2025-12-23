@@ -103,7 +103,20 @@ class DownloadWorker(Thread):
     def _handle_medium_url(self, medium_type, post):
         try:
             if medium_type == "photo":
-                return post["photo-url"][0]["#text"]
+                # First try the traditional photo-url format
+                try:
+                    return post["photo-url"][0]["#text"]
+                except:
+                    # If no photo-url, check for images embedded in HTML regular-body
+                    try:
+                        regular_body = post["regular-body"]
+                        # Extract image URLs from <img> tags in HTML content
+                        img_matches = re.findall(r'<img[^>]*src="([^"]+)"', regular_body)
+                        if img_matches:
+                            return img_matches[0]  # Return the first image found
+                    except:
+                        pass
+                raise Exception("No photo-url or embedded images found")
 
             if medium_type == "video":
                 video_player = post["video-player"][1]["#text"]
