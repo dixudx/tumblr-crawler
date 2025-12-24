@@ -30,11 +30,27 @@ THREADS = 10
 EACH_POST_AS_SEPARATE_JSON = False
 
 
+def video_source_match():
+    """Extract video URL from <source src="..."> tags (current Tumblr format)"""
+    source_pattern = re.compile(r'<source\s+src="([^"]*\.mp4[^"]*)"[^>]*>', re.IGNORECASE)
+
+    def match(video_player):
+        source_match = source_pattern.search(video_player)
+        if source_match is not None:
+            try:
+                return source_match.group(1)
+            except:
+                return None
+        return None
+    return match
+
+
 def video_hd_match():
+    """Extract HD video URL from JSON data-crt-options (legacy format)"""
     hd_pattern = re.compile(r'.*"hdUrl":("([^\s,]*)"|false),')
 
     def match(video_player):
-        hd_match = hd_pattern.match(video_player)
+        hd_match = hd_pattern.search(video_player)
         try:
             if hd_match is not None and hd_match.group(1) != 'false':
                 return hd_match.group(2).replace('\\', '')
@@ -44,6 +60,7 @@ def video_hd_match():
 
 
 def video_default_match():
+    """Extract video URL from src attributes (legacy iframe format)"""
     default_pattern = re.compile(r'.*src="(\S*)" ', re.DOTALL)
 
     def match(video_player):
@@ -81,12 +98,25 @@ class DownloadWorker(Thread):
     def _register_regex_match_rules(self):
         # will iterate all the rules
         # the first matched result will be returned
-        self.regex_rules = [video_hd_match(), video_default_match()]
+        self.regex_rules = [video_source_match(), video_hd_match(), video_default_match()]
 
     def _handle_medium_url(self, medium_type, post):
         try:
             if medium_type == "photo":
-                return post["photo-url"][0]["#text"]
+                # First try the traditional photo-url format
+                try:
+                    return post["photo-url"][0]["#text"]
+                except:
+                    # If no photo-url, check for images embedded in HTML regular-body
+                    try:
+                        regular_body = post["regular-body"]
+                        # Extract image URLs from <img> tags in HTML content
+                        img_matches = re.findall(r'<img[^>]*src="([^"]+)"', regular_body)
+                        if img_matches:
+                            return img_matches[0]  # Return the first image found
+                    except:
+                        pass
+                raise Exception("No photo-url or embedded images found")
 
             if medium_type == "video":
                 video_player = post["video-player"][1]["#text"]
@@ -104,29 +134,34 @@ class DownloadWorker(Thread):
                             "%s" % post)
 
     def _download(self, medium_type, medium_url, target_folder):
-        medium_name = medium_url.split("/")[-1].split("?")[0]
-        if medium_type == "video":
+        # If URL is already complete (starts with http), use it directly
+        if medium_url.startswith('http'):
+            final_url = medium_url
+        else:
+            # For legacy relative URLs, construct full URL
+            medium_name = medium_url.split("/")[-1].split("?")[0]
             if not medium_name.startswith("tumblr"):
                 medium_name = "_".join([medium_url.split("/")[-2],
                                         medium_name])
-
             medium_name += ".mp4"
-            medium_url = 'https://vt.tumblr.com/' + medium_name
+            final_url = 'https://vt.tumblr.com/' + medium_name
+
+        medium_name = final_url.split("/")[-1].split("?")[0]
 
         file_path = os.path.join(target_folder, medium_name)
         if not os.path.isfile(file_path):
             print("Downloading %s from %s.\n" % (medium_name,
-                                                 medium_url))
+                                                 final_url))
             retry_times = 0
             while retry_times < RETRY:
                 try:
-                    resp = requests.get(medium_url,
+                    resp = requests.get(final_url,
                                         stream=True,
                                         proxies=self.proxies,
                                         timeout=TIMEOUT)
                     if resp.status_code == 403:
                         retry_times = RETRY
-                        print("Access Denied when retrieve %s.\n" % medium_url)
+                        print("Access Denied when retrieve %s.\n" % final_url)
                         raise Exception("Access Denied")
                     with open(file_path, 'wb') as fh:
                         for chunk in resp.iter_content(chunk_size=1024):
@@ -142,7 +177,7 @@ class DownloadWorker(Thread):
                 except OSError:
                     pass
                 print("Failed to retrieve %s from %s.\n" % (medium_type,
-                                                            medium_url))
+                                                          final_url))
 
 
 class CrawlerScheduler(object):
