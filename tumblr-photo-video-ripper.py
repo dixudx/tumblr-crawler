@@ -110,7 +110,28 @@ class DownloadWorker(Thread):
                     # If no photo-url, check for images embedded in HTML regular-body
                     try:
                         regular_body = post["regular-body"]
-                        # Extract image URLs from <img> tags in HTML content
+                        
+                        # First try to extract from srcset attribute (highest quality)
+                        srcset_match = re.search(r'srcset="([^"]+)"', regular_body)
+                        if srcset_match:
+                            srcset = srcset_match.group(1)
+                            # Parse srcset entries: "url 640w, url 1280w, ..."
+                            entries = []
+                            for entry in srcset.split(','):
+                                entry = entry.strip()
+                                # Extract URL and width from "https://...url NNNw" format
+                                url_width_match = re.search(r'(https://[^\s]+)\s+(\d+)w', entry)
+                                if url_width_match:
+                                    url = url_width_match.group(1)
+                                    width = int(url_width_match.group(2))
+                                    entries.append((width, url))
+                            
+                            # Sort by width descending and return highest quality
+                            if entries:
+                                entries.sort(reverse=True)  # Sort by width (first element of tuple)
+                                return entries[0][1]  # Return URL of highest width
+                        
+                        # Fall back to src attribute if no srcset
                         img_matches = re.findall(r'<img[^>]*src="([^"]+)"', regular_body)
                         if img_matches:
                             return img_matches[0]  # Return the first image found
